@@ -1,0 +1,50 @@
+article[data-testid="tweet"].dl-band-low,
+article.dl-band-low {
+  box-shadow: inset 3px 0 0 #b58112;
+}
+
+article[data-testid="tweet"].dl-band-mid,
+article.dl-band-mid {
+  box-shadow: inset 3px 0 0 #2f6fdb;
+}
+
+article[data-testid="tweet"].dl-band-high,
+article.dl-band-high {
+  box-shadow: inset 3px 0 0 #c2452d;
+  background-color: rgba(194, 69, 45, 0.06);
+}
+
+article[data-testid="tweet"].dl-dim,
+article.dl-dim {
+  opacity: 0.45;
+}
+
+article[data-testid="tweet"].dl-unknown,
+article.dl-unknown {
+  box-shadow: inset 3px 0 0 #8a8175;
+}
+
+article[data-dl-badge] {
+  position: relative;
+}
+
+article[data-dl-badge]::after {
+  content: attr(data-dl-score);
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 52px;
+  min-width: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #1d1a16;
+  color: #f6f3ec;
+  font: 600 11px/1.6 ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+html.dl-debug-on article[data-dl-key] {
+  outline: 1px dashed rgba(28, 25, 21, 0.45);
+  outline-offset: -1px;
+}

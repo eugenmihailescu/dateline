@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "aggregation": "sum",
+  "rules": [
+    {
+      "id": "region-africa",
+      "name": "Africa",
+      "enabled": true,
+      "priority": 30,
+      "points": 10,
+      "when": {
+        "all": [
+          { "signal": "region", "op": "in", "values": ["africa"] },
+          { "signal": "confidence", "op": "gte", "value": 0.6 }
+        ]
+      }
+    },
+    {
+      "id": "region-europe-except-gb-ie",
+      "name": "Europe except UK and Ireland",
+      "enabled": true,
+      "priority": 20,
+      "points": 20,
+      "when": {
+        "all": [
+          { "signal": "region", "op": "in", "values": ["europe"] },
+          { "signal": "confidence", "op": "gte", "value": 0.6 },
+          { "not": { "signal": "country", "op": "in", "values": ["GB", "IE"] } }
+        ]
+      }
+    },
+    {
+      "id": "country-il",
+      "name": "Israel",
+      "enabled": true,
+      "priority": 10,
+      "points": 50,
+      "when": {
+        "all": [
+          { "signal": "country", "op": "in", "values": ["IL"] },
+          { "signal": "confidence", "op": "gte", "value": 0.6 }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "dateline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Color x.com posts by where the account is based.",
+  "author": {
+    "name": "Eugen Mihailescu",
+    "email": "eugen.mihailescu@protonmail.com",
+    "url": "https://www.linkedin.com/in/eugenmihailescu"
+  },
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:hook": "node scripts/build-hook.mjs",
+    "build:places": "python3 scripts/build-places.py",
+    "test": "node scripts/build-hook.mjs && node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

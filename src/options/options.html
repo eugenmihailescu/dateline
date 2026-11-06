@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dateline options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header class="mast">
+      <div>
+        <p class="eyebrow">x.com</p>
+        <h1>Dateline</h1>
+        <p class="lede">Color posts by where the account is based. Rules stay in this browser.</p>
+      </div>
+      <label class="switch">
+        <input id="enabled" type="checkbox" />
+        <span>Enabled</span>
+      </label>
+    </header>
+    <p id="status" class="status" role="status"></p>
+    <nav class="tabs" aria-label="Settings sections">
+      <button type="button" class="tab" id="tab-rules" aria-controls="panel-rules">Rules</button>
+      <button type="button" class="tab" id="tab-appearance" aria-controls="panel-appearance">Appearance</button>
+      <button type="button" class="tab" id="tab-places" aria-controls="panel-places">Places</button>
+      <button type="button" class="tab" id="tab-settings" aria-controls="panel-settings">Settings</button>
+    </nav>
+
+    <section id="panel-rules" class="panel" aria-labelledby="tab-rules">
+      <div class="row">
+        <label>
+          When several rules match
+          <select id="aggregation">
+            <option value="sum">Add their points</option>
+            <option value="max">Use the highest points</option>
+            <option value="first">Use the first rule in the list</option>
+          </select>
+        </label>
+        <div class="row-actions">
+          <button type="button" id="export-rules">Export</button>
+          <button type="button" id="import-rules">Import</button>
+          <button type="button" id="load-examples">Load examples</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+      <p class="hint">A post with no location is left alone. It is not treated as a score of zero.</p>
+      <div id="rule-list" class="stack"></div>
+      <form id="rule-form" class="card">
+        <h2 id="rule-form-title">New rule</h2>
+        <div class="grid">
+          <label>Name <input id="rule-name" required /></label>
+          <label>Points <input id="rule-points" type="number" step="1" value="10" required /></label>
+        </div>
+        <fieldset>
+          <legend>Regions</legend>
+          <div id="region-choices" class="choices"></div>
+        </fieldset>
+        <div class="grid">
+          <label>Countries <input id="rule-countries" list="country-list" placeholder="France, IL" /></label>
+          <label>Except countries <input id="rule-except" list="country-list" placeholder="GB, Ireland" /></label>
+        </div>
+        <div class="grid">
+          <label>Stated location contains <input id="rule-contains" placeholder="diaspora" /></label>
+          <label>Minimum confidence <input id="rule-confidence" type="number" min="0" max="1" step="0.05" value="0.6" /></label>
+        </div>
+        <label class="check"><input id="rule-enabled" type="checkbox" checked /> Enabled</label>
+        <details>
+          <summary>Edit the rule as JSON</summary>
+          <label class="block">JSON <textarea id="rule-json" rows="8" spellcheck="false"></textarea></label>
+        </details>
+        <div class="row-actions">
+          <button type="submit" id="rule-save">Add rule</button>
+          <button type="button" id="rule-cancel" hidden>Cancel</button>
+        </div>
+        <p id="rule-error" class="error" role="alert"></p>
+      </form>
+    </section>
+
+    <section id="panel-appearance" class="panel" hidden aria-labelledby="tab-appearance">
+      <p class="hint">Ranges should not overlap. A class must start with <code>dl-</code>.</p>
+      <div id="range-list" class="stack"></div>
+      <form id="range-form" class="card">
+        <h2>New score band</h2>
+        <div class="grid">
+          <label>Name <input id="range-name" required /></label>
+          <label>Classes <input id="range-classes" placeholder="dl-band-low" /></label>
+        </div>
+        <div class="grid">
+          <label>From <input id="range-min" type="number" step="1" /></label>
+          <label>To <input id="range-max" type="number" step="1" placeholder="No limit" /></label>
+        </div>
+        <label class="check"><input id="range-min-in" type="checkbox" checked /> Include the start score</label>
+        <label class="check"><input id="range-max-in" type="checkbox" /> Include the end score</label>
+        <label class="check"><input id="range-badge" type="checkbox" checked /> Show the score</label>
+        <div class="row-actions">
+          <button type="button" data-class="dl-band-low">Low</button>
+          <button type="button" data-class="dl-band-mid">Medium</button>
+          <button type="button" data-class="dl-band-high">High</button>
+          <button type="button" data-class="dl-dim">Dim</button>
+          <button type="submit">Add band</button>
+        </div>
+        <p id="range-error" class="error" role="alert"></p>
+      </form>
+      <label class="block">Your CSS
+        <textarea id="user-css" rows="6" spellcheck="false" placeholder="article.dl-band-high { box-shadow: inset 3px 0 0 rebeccapurple; }"></textarea>
+      </label>
+      <button type="button" id="save-css">Save CSS</button>
+    </section>
+
+    <section id="panel-places" class="panel" hidden aria-labelledby="tab-places">
+      <form id="playground" class="card">
+        <h2>Try a location</h2>
+        <label>Free text <input id="playground-text" placeholder="Lyon" /></label>
+        <p id="playground-result" class="hint"></p>
+      </form>
+      <form id="alias-form" class="card">
+        <h2>Location alias</h2>
+        <div class="grid">
+          <label>When the text is <input id="alias-phrase" required placeholder="Holland" /></label>
+          <label>Use country <input id="alias-country" list="country-list" required placeholder="Netherlands" /></label>
+        </div>
+        <button type="submit">Add alias</button>
+        <div id="alias-list" class="stack"></div>
+      </form>
+      <label>Find a country <input id="country-search" placeholder="Israel" /></label>
+      <div id="country-table" class="stack"></div>
+    </section>
+
+    <section id="panel-settings" class="panel" hidden aria-labelledby="tab-settings">
+      <label class="check"><input id="skip-promoted" type="checkbox" /> Skip promoted posts</label>
+      <label class="check"><input id="enrichment" type="checkbox" /> Read “About this account” for visible posts</label>
+      <label class="check"><input id="mark-unknown" type="checkbox" /> Mark posts whose place is unknown</label>
+      <label class="check"><input id="debug" type="checkbox" /> Debug mode</label>
+      <label class="check"><input id="sync-rules" type="checkbox" /> Sync rules across browsers signed into Chrome</label>
+      <div class="grid">
+        <label>Pause between reads (ms) <input id="pace" type="number" min="500" max="10000" step="100" /></label>
+        <label>New accounts per minute <input id="pace-cap" type="number" min="1" max="40" step="1" /></label>
+      </div>
+      <div class="row-actions">
+        <button type="button" id="clear-cache">Clear saved places</button>
+        <button type="button" id="copy-debug">Copy debug log</button>
+      </div>
+      <p class="hint">Place names are saved only on this browser. Sync copies rules and settings, not accounts. The profile cache holds at most 5,000 accounts.</p>
+    </section>
+    <datalist id="country-list"></datalist>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
