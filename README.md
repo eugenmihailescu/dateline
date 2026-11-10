@@ -29,8 +29,9 @@ A post with no usable place is not scored as zero. Zero means the place was know
 
 | Signal | Where it comes from | How sure |
 | --- | --- | --- |
-| About this account | Country label x.com shows for the account | Strongest. Still not proof of residence. Confidence 0.90. |
-| Stated location | The profile’s free-text place | Country name 0.75, known city 0.60. Jokes and two-country strings are unknown. |
+| About this account | Country x.com shows, or a region when that label is only a continent such as Africa. X’s “West Asia” label is the Middle East country set. | Strongest. Still not proof of residence. Confidence 0.90. A profile country in another region does not replace it, and that profile country is not scored. |
+| Connected via | The app or store on the same About screen, such as “Africa Android App” or “United States App Store” | Used when Account based in has no place. One country, or one region, at confidence 0.70. “Web” is ignored. “South Africa Android App” is South Africa, not the Africa region alone. |
+| Stated location | The profile’s free-text place | Country name 0.75, known city 0.60. Jokes, “Earth”, and a bare continent are unknown. |
 | Website host, account language | Profile fields | Optional rule conditions. They never assign a country by themselves. |
 
 Timeline posts do not include a place. Dateline reads places from profiles you open, from responses x.com already made, and, when enrichment is on, from a slow queue of “About this account” reads for posts on screen. The queue waits at least 800 ms between reads and stops at 40 new accounts a minute. A rate limit pauses it.
@@ -43,7 +44,7 @@ You need to be logged in for “About this account”. Stated locations on profi
 npm test
 ```
 
-`npm test` rebuilds `src/page/net-hook.js` from `src/lib/graphql.js` and `src/page/hook-main.js`. Edit those two files, not the generated hook.
+`npm test` rebuilds two generated scripts. `src/page/net-hook.js` comes from `src/lib/graphql.js` and `src/page/hook-main.js`. `src/page/content.js` is the isolated page script, bundled into one classic file so x.com’s content-security policy cannot block it. Edit the source modules, not the generated files.
 
 `python3 scripts/build-places.py` refreshes the country list. It needs the system `iso-codes` package. The generated `src/data/places.js` is committed.
 

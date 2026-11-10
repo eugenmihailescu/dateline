@@ -101,6 +101,22 @@ export function createIndex({ regionOverrides = {}, locationAliases = {} } = {})
   phraseCountry.sort((a, b) => b.phrase.length - a.phrase.length);
   phraseCity.sort((a, b) => b.phrase.length - a.phrase.length);
 
+  // Whole labels only. "South Africa" stays a country, and "european" is not Europe.
+  // X's privacy label for the Middle East country set is "West Asia".
+  const exactRegion = new Map();
+  const phraseRegion = [];
+  const regionLabels = [
+    ...places.regions.map((region) => [region.label, region.id]),
+    ["West Asia", "middle_east"],
+  ];
+  for (const [label, id] of regionLabels) {
+    const key = cleanText(label);
+    if (!key || exactRegion.has(key)) continue;
+    exactRegion.set(key, id);
+    phraseRegion.push({ phrase: key, id });
+  }
+  phraseRegion.sort((a, b) => b.phrase.length - a.phrase.length);
+
   const aliases = {};
   for (const [phrase, code] of Object.entries(locationAliases)) {
     const key = cleanText(phrase);
@@ -117,6 +133,8 @@ export function createIndex({ regionOverrides = {}, locationAliases = {} } = {})
     phraseCountry,
     exactCity,
     phraseCity,
+    exactRegion,
+    phraseRegion,
     regionOverrides,
     locationAliases: aliases,
   };
@@ -167,6 +185,18 @@ function matchCountryPhrases(text, phrases) {
   return [...new Set(found)];
 }
 
+function matchRegionPhrases(text, phrases) {
+  let working = ` ${text} `;
+  const found = [];
+  for (const item of phrases) {
+    const needle = ` ${item.phrase} `;
+    if (!working.includes(needle)) continue;
+    found.push(item.id);
+    working = working.split(needle).join(" ");
+  }
+  return [...new Set(found)];
+}
+
 function matchCityPhrases(text, phrases) {
   let working = ` ${text} `;
   const found = [];
@@ -205,6 +235,27 @@ export function normalizeLocation(raw, index) {
   if (cities.length > 1) return ambiguousResult(original);
 
   return unknown("unrecognized", original);
+}
+
+// X sometimes blurs "Account based in" to a region name such as "Africa".
+export function exactRegionId(raw, index) {
+  const text = stripFiller(cleanText(typeof raw === "string" ? raw.trim() : ""));
+  if (!text || DENY.has(text)) return null;
+  return index.exactRegion.get(text) || null;
+}
+
+// "Connected via" is a storefront string: "Africa Android App", "United States
+// App Store", or "Web". A country phrase wins, so "South Africa" is not Africa-the-region.
+export function normalizeConnectedVia(raw, index) {
+  const text = cleanText(typeof raw === "string" ? raw.trim() : "");
+  const empty = { country: null, region: null };
+  if (!text || DENY.has(text)) return empty;
+  const countries = matchCountryPhrases(text, index.phraseCountry);
+  if (countries.length === 1) return { country: countries[0], region: regionFor(index, countries[0]) };
+  if (countries.length > 1) return empty;
+  const regions = matchRegionPhrases(text, index.phraseRegion);
+  if (regions.length === 1) return { country: null, region: regions[0] };
+  return empty;
 }
 
 export function regionFor(index, code) {

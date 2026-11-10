@@ -34,7 +34,8 @@
     },
     {
       "matches": ["https://x.com/*", "https://twitter.com/*"],
-      "js": ["src/page/boot.js"],
+      "js": ["src/page/content.js"],
+      "css": ["src/page/content.css"],
       "run_at": "document_start",
       "all_frames": false
     }

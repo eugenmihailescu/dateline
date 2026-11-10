@@ -1,7 +1,7 @@
 import { emptyCache } from "../lib/cache.js";
 import { sanitizeCss } from "../lib/css-sanitize.js";
 import { mergeState } from "../lib/migrate.js";
-import { createIndex, normalizeLocation, parseCountryList, regionFor } from "../lib/normalize.js";
+import { createIndex, exactRegionId, normalizeLocation, parseCountryList, regionFor } from "../lib/normalize.js";
 import { compileSimpleRule, readSimpleRule } from "../lib/rule-form.js";
 import { loadStateWithSync, saveState } from "../lib/storage.js";
 import { validateRuleset } from "../lib/validate.js";
@@ -185,8 +185,12 @@ function renderPlayground() {
   }
   const places = index();
   const match = normalizeLocation(text, places);
+  const regionId = exactRegionId(text, places);
   if (match.ambiguous) result.textContent = "Ambiguous. Dateline will not score it.";
-  else if (!match.code) result.textContent = `Unknown (${match.unknownReason}).`;
+  else if (!match.code && regionId) {
+    const region = places.regions.find((item) => item.id === regionId);
+    result.textContent = `${region?.label || regionId} · region label · confidence 0.90`;
+  } else if (!match.code) result.textContent = `Unknown (${match.unknownReason}).`;
   else {
     const region = places.regions.find((item) => item.id === regionFor(places, match.code));
     result.textContent = `${match.code} · ${region?.label || "no region"} · ${match.source} · confidence ${match.confidence}`;
@@ -350,17 +354,34 @@ $("#range-form").addEventListener("submit", async (event) => {
   $("#range-form").reset();
   $("#range-min-in").checked = true;
   $("#range-badge").checked = true;
+  syncPresetButtons();
 });
+
+function classTokens(value) {
+  return new Set(value.split(/[\s,]+/).filter(Boolean));
+}
+
+function syncPresetButtons() {
+  const classes = classTokens($("#range-classes").value);
+  for (const preset of document.querySelectorAll("[data-class]")) {
+    preset.setAttribute("aria-pressed", classes.has(preset.getAttribute("data-class")) ? "true" : "false");
+  }
+}
 
 for (const preset of document.querySelectorAll("[data-class]")) {
   preset.addEventListener("click", () => {
     const input = $("#range-classes");
     const value = preset.getAttribute("data-class");
-    const classes = new Set(input.value.split(/[\s,]+/).filter(Boolean));
-    classes.add(value);
+    const classes = classTokens(input.value);
+    if (classes.has(value)) classes.delete(value);
+    else classes.add(value);
     input.value = [...classes].join(" ");
+    syncPresetButtons();
   });
 }
+
+$("#range-classes").addEventListener("input", syncPresetButtons);
+syncPresetButtons();
 
 $("#alias-form").addEventListener("submit", async (event) => {
   event.preventDefault();

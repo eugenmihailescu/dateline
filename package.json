@@ -12,8 +12,9 @@
   "type": "module",
   "scripts": {
     "build:hook": "node scripts/build-hook.mjs",
+    "build:content": "node scripts/build-content.mjs",
     "build:places": "python3 scripts/build-places.py",
-    "test": "node scripts/build-hook.mjs && node --test"
+    "test": "node scripts/build-hook.mjs && node scripts/build-content.mjs && node --test"
   },
   "engines": {
     "node": ">=20"

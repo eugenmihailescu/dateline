@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { applyVisual } from "../src/lib/apply.js";
-import { emptyCache, putCached, readCached } from "../src/lib/cache.js";
+import { emptyCache, expiryFor, putCached, readCached, TTL } from "../src/lib/cache.js";
 import { sanitizeCss } from "../src/lib/css-sanitize.js";
 import { handleFromHref, profileHandleFromPath, statusIdFromHref } from "../src/lib/dom.js";
-import { extractSignals, findAccountBasedIn } from "../src/lib/graphql.js";
+import { extractSignals, findAboutSource, findAccountBasedIn } from "../src/lib/graphql.js";
 import { mergeState } from "../src/lib/migrate.js";
 import { rangesOverlap } from "../src/lib/ranges.js";
 import { syncErrors, syncItems } from "../src/lib/sync.js";
@@ -91,7 +91,7 @@ test("graphql user objects keep the about label and the stated location", () => 
       user_result_by_screen_name: {
         result: {
           core: { screen_name: "ada" },
-          about_profile: { account_based_in: "France" },
+          about_profile: { account_based_in: "France", source: "United States App Store" },
           legacy: { location: "Lyon", lang: "en", screen_name: "ada" },
         },
       },
@@ -101,7 +101,29 @@ test("graphql user objects keep the about label and the stated location", () => 
   assert.equal(users[0].handle, "ada");
   assert.equal(users[0].accountBasedIn, "France");
   assert.equal(users[0].statedLocation, "Lyon");
+  assert.equal(users[0].connectedVia, "United States App Store");
   assert.equal(findAccountBasedIn({ about_profile: { account_based_in: "Israel" } }), "Israel");
+  const africa = extractSignals({
+    data: {
+      user: {
+        result: {
+          core: { screen_name: "Ugboma4Christ" },
+          about_profile: { accountBasedIn: "Africa", source: "Africa Android App" },
+        },
+      },
+    },
+  });
+  assert.equal(africa[0].accountBasedIn, "Africa");
+  assert.equal(africa[0].connectedVia, "Africa Android App");
+  assert.equal(findAboutSource({ about_profile: { source: "Iran Android App" } }), "Iran Android App");
+});
+
+test("an About label keeps the longer cache lifetime", () => {
+  const now = 1_000_000;
+  assert.equal(expiryFor({ accountBasedInRaw: "Africa" }, now), now + TTL.aboutMs);
+  assert.equal(expiryFor({ connectedViaRaw: "Africa Android App" }, now), now + TTL.aboutMs);
+  assert.equal(expiryFor({ statedLocationRaw: "Germany" }, now), now + TTL.statedMs);
+  assert.equal(expiryFor({ aboutChecked: true }, now), now + TTL.negativeMs);
 });
 
 test("adjacent score bands do not overlap", () => {

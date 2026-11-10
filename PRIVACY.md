@@ -1,6 +1,6 @@
 # Privacy policy for Dateline
 
-Last updated: 6 November 2026
+Last updated: 10 November 2026
 
 Dateline is a browser extension by Eugen Mihailescu. On x.com it reads public signals about where an account is based, scores the posts you can already see with rules you wrote, and colors those posts. This policy says what the extension stores, why, and who can see it.
 
@@ -30,7 +30,7 @@ The rules are stored so your colors come back. The account cache is stored so a 
 
 ## How long it is kept
 
-An “About this account” country is kept for 30 days. A stated location with no such country is kept for 7 days. A miss is kept for 24 hours. **Clear saved places** deletes the cache. Removing Dateline deletes the extension’s stored data.
+An “About this account” country, region, or Connected via label is kept for 30 days. A stated location with none of those is kept for 7 days. A miss is kept for 24 hours. **Clear saved places** deletes the cache. Removing Dateline deletes the extension’s stored data.
 
 ## Who can see it
 

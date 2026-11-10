@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { places } from "../src/data/places.js";
-import { createIndex, normalizeLocation, regionFor } from "../src/lib/normalize.js";
+import { createIndex, exactRegionId, normalizeConnectedVia, normalizeLocation, regionFor } from "../src/lib/normalize.js";
 
 test("every country has one known region", () => {
   const regions = new Set(places.regions.map((region) => region.id));
@@ -47,4 +47,17 @@ test("free-text locations normalize or stay unknown", () => {
   assert.equal(normalizeLocation("Holland", index).code, "NL");
   assert.equal(normalizeLocation("", index).unknownReason, "empty");
   assert.equal(normalizeLocation("no", index).code, null);
+  assert.equal(normalizeLocation("Africa", index).code, null);
+  assert.equal(exactRegionId("Africa", index), "africa");
+  assert.equal(exactRegionId("South Africa", index), null);
+  assert.equal(exactRegionId("Central America and Caribbean", index), "central_america_caribbean");
+  assert.equal(exactRegionId("West Asia", index), "middle_east");
+  assert.deepEqual(normalizeConnectedVia("West Asia App Store", index), { country: null, region: "middle_east" });
+  assert.deepEqual(normalizeConnectedVia("South Africa Android App", index), { country: "ZA", region: "africa" });
+  assert.deepEqual(normalizeConnectedVia("Africa Android App", index), { country: null, region: "africa" });
+  assert.deepEqual(normalizeConnectedVia("United States App Store", index), { country: "US", region: "north_america" });
+  assert.deepEqual(normalizeConnectedVia("South Asia App Store", index), { country: null, region: "south_asia" });
+  assert.deepEqual(normalizeConnectedVia("Web", index), { country: null, region: null });
+  assert.deepEqual(normalizeConnectedVia("European App Store", index), { country: null, region: null });
+  assert.deepEqual(normalizeConnectedVia("France and Nigeria App Store", index), { country: null, region: null });
 });

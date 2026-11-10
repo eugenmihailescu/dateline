@@ -58,7 +58,8 @@ button, .tab {
 
 button:hover, .tab:hover { border-color: #1d1a16; }
 
-.tab[aria-selected="true"] {
+.tab[aria-selected="true"],
+button[data-class][aria-pressed="true"] {
   background: #1d1a16;
   color: #f6f3ec;
   border-color: #1d1a16;

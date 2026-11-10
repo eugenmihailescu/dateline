@@ -17,6 +17,11 @@ test("manifest stays on x.com and uses Manifest V3", () => {
   );
   assert.equal(manifest.content_scripts[0].world, "MAIN");
   assert.equal(manifest.content_scripts[0].run_at, "document_start");
+  assert.deepEqual(manifest.content_scripts[0].js, ["src/page/net-hook.js"]);
+  assert.deepEqual(manifest.content_scripts[1].js, ["src/page/content.js"]);
+  assert.deepEqual(manifest.content_scripts[1].css, ["src/page/content.css"]);
+  assert.equal(manifest.content_scripts[1].world, undefined);
+  assert.equal(manifest.web_accessible_resources, undefined);
   assert.equal(manifest.background.service_worker, "src/background/service-worker.js");
   assert.equal(manifest.background.type, "module");
 });

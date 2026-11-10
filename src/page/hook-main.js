@@ -227,6 +227,7 @@ async function enrich(handle) {
     handle,
     accountBasedIn: user?.accountBasedIn || findAccountBasedIn(data),
     statedLocation: user?.statedLocation || "",
+    connectedVia: user?.connectedVia || findAboutSource(data),
     lang: user?.lang || "",
     websiteHost: user?.websiteHost || "",
   };

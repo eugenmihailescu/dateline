@@ -35,7 +35,7 @@ export function putCached(cache, handle, entry, now, max = 5000) {
 }
 
 export function expiryFor(partial, now) {
-  if (partial?.accountBasedInRaw) return now + TTL.aboutMs;
+  if (partial?.accountBasedInRaw || partial?.connectedViaRaw) return now + TTL.aboutMs;
   if (partial?.statedLocationRaw) return now + TTL.statedMs;
   if (partial?.aboutChecked) return now + TTL.negativeMs;
   return now + TTL.statedMs;

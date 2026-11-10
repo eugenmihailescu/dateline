@@ -43,6 +43,9 @@ let started = false;
 export function start() {
   if (started) return;
   started = true;
+  // Register before boot() awaits storage. The popup treats a missing listener
+  // as "this tab is not an x.com page".
+  chrome.runtime.onMessage.addListener(onExtensionMessage);
   const begin = () => {
     boot().catch((error) => console.error("[dateline]", error));
   };
@@ -57,7 +60,6 @@ async function boot() {
   rebuildIndex();
   applyChrome();
   chrome.storage.onChanged.addListener(onStorage);
-  chrome.runtime.onMessage.addListener(onExtensionMessage);
   observer = new IntersectionObserver(onIntersect, { root: null, rootMargin: "400px 0px" });
   new MutationObserver(() => schedule()).observe(document.body, { childList: true, subtree: true });
   window.addEventListener("message", onPageMessage);
@@ -227,7 +229,7 @@ function paint(post) {
   else counts.unresolved += 1;
   const summary = [
     post.handle,
-    signal.country || signal.unknownReason || "unknown",
+    signal.country || (signal.resolved ? signal.region : null) || signal.unknownReason || "unknown",
     signal.region || "",
     decision.status === "scored" ? decision.score : decision.status,
   ].join(" · ");
@@ -244,6 +246,7 @@ function partialFor(handle) {
     handle,
     accountBasedInRaw: entry?.partial?.accountBasedInRaw || "",
     statedLocationRaw: entry?.partial?.statedLocationRaw || "",
+    connectedViaRaw: entry?.partial?.connectedViaRaw || "",
     lang: entry?.partial?.lang || "",
     websiteHost: entry?.partial?.websiteHost || "",
     aboutChecked: entry?.partial?.aboutChecked === true,
@@ -271,6 +274,7 @@ function absorbRemote(user, aboutChecked) {
   if (!user?.handle) return;
   const partial = partialFor(user.handle);
   if (user.accountBasedIn) partial.accountBasedInRaw = user.accountBasedIn;
+  if (user.connectedVia) partial.connectedViaRaw = user.connectedVia;
   if (user.statedLocation) partial.statedLocationRaw = user.statedLocation;
   if (user.lang) partial.lang = user.lang;
   if (user.websiteHost) partial.websiteHost = user.websiteHost;
@@ -348,6 +352,7 @@ function applyEnrichResult(handle, result) {
         handle,
         accountBasedIn: result.accountBasedIn || "",
         statedLocation: result.statedLocation || "",
+        connectedVia: result.connectedVia || "",
         lang: result.lang || "",
         websiteHost: result.websiteHost || "",
       },
