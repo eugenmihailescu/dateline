@@ -3183,6 +3183,36 @@ function clearMarks(element) {
   delete element.dataset.dlDebug;
 }
 
+function visualClassNames({ decision, range, markUnknown }) {
+  if (!decision || decision.status !== "scored" || !range) {
+    return markUnknown && decision?.status === "unresolved" ? ["dl-unknown"] : [];
+  }
+  const classes = [];
+  for (const action of range.actions || []) {
+    if (action.type !== "addClass") continue;
+    for (const name of action.classes || []) {
+      if (CLASS_NAME.test(name)) classes.push(name);
+    }
+  }
+  return classes;
+}
+
+// X rewrites className on the same article when a timestamp or counter updates.
+// The score is unchanged, so a missing dl- class still has to be painted again.
+function sameMarks(element, classes) {
+  const expected = new Set(classes);
+  for (const name of element.classList) {
+    if (!name.startsWith("dl-")) continue;
+    if (!expected.delete(name)) return false;
+  }
+  return expected.size === 0;
+}
+
+function lostDatelineClass(oldValue, element) {
+  const previous = String(oldValue || "").split(/\s+/);
+  return previous.some((name) => name.startsWith("dl-") && !element.classList.contains(name));
+}
+
 function applyVisual(element, { key, decision, range, markUnknown, debug, summary }) {
   clearMarks(element);
   if (key) element.dataset.dlKey = key;
@@ -3192,18 +3222,11 @@ function applyVisual(element, { key, decision, range, markUnknown, debug, summar
     return;
   }
   if (!range) return;
-  const classes = [];
   let badge = false;
   for (const action of range.actions || []) {
-    if (action.type === "addClass") {
-      for (const name of action.classes || []) {
-        if (CLASS_NAME.test(name)) classes.push(name);
-      }
-    } else if (action.type === "badge") {
-      badge = true;
-    }
+    if (action.type === "badge") badge = true;
   }
-  for (const name of classes) element.classList.add(name);
+  for (const name of visualClassNames({ decision, range, markUnknown })) element.classList.add(name);
   const labels = (decision.matched || []).map((rule) => rule.name).filter(Boolean);
   if (labels.length) element.dataset.dlLabel = labels.join(", ");
   if (badge) {
@@ -3379,6 +3402,7 @@ let cache = emptyCache();
 let placesIndex = createIndex();
 let signatures = new WeakMap();
 let observer = null;
+let classObserver = null;
 const observed = new WeakSet();
 const intersecting = new WeakSet();
 const pending = new Map();
@@ -3424,6 +3448,7 @@ async function boot() {
   chrome.storage.onChanged.addListener(onStorage);
   observer = new IntersectionObserver(onIntersect, { root: null, rootMargin: "400px 0px" });
   new MutationObserver(() => schedule()).observe(document.body, { childList: true, subtree: true });
+  classObserver = new MutationObserver(onClassReset);
   window.addEventListener("message", onPageMessage);
   const helloTimer = setInterval(() => {
     if (acked) {
@@ -3522,11 +3547,34 @@ function applyChrome() {
   if (!style) document.documentElement.appendChild(node);
 }
 
-function schedule() {
+function onClassReset(records) {
+  for (const record of records) {
+    if (record.attributeName !== "class") continue;
+    if (lostDatelineClass(record.oldValue, record.target)) {
+      schedule(0);
+      return;
+    }
+  }
+}
+
+function watchPostClasses(posts) {
+  if (!classObserver) return;
+  // Drop records from our own classList edits, then watch the posts we just painted.
+  classObserver.disconnect();
+  for (const post of posts) {
+    classObserver.observe(post.element, {
+      attributes: true,
+      attributeFilter: ["class"],
+      attributeOldValue: true,
+    });
+  }
+}
+
+function schedule(delayOverride) {
   const now = Date.now();
   if (!firstDirty) firstDirty = now;
   clearTimeout(scanTimer);
-  const delay = now - firstDirty >= 800 ? 0 : 200;
+  const delay = delayOverride === undefined ? (now - firstDirty >= 800 ? 0 : 200) : delayOverride;
   scanTimer = setTimeout(() => {
     firstDirty = 0;
     scan();
@@ -3566,6 +3614,7 @@ function scan() {
     }
     paint(post);
   }
+  watchPostClasses(posts);
   if (profile) visible.add(profile.handle.toLowerCase());
   if (!state.enabled || !state.enrichment) return;
   for (const handle of visible) {
@@ -3578,7 +3627,7 @@ function paint(post) {
   const key = `${post.statusId}:${post.handle.toLowerCase()}`;
   if (!state.enabled || (state.skipPromoted && post.promoted)) {
     const signature = `${key}|off`;
-    if (signatures.get(post.element) === signature) return;
+    if (signatures.get(post.element) === signature && sameMarks(post.element, [])) return;
     signatures.set(post.element, signature);
     clearMarks(post.element);
     return;
@@ -3595,8 +3644,9 @@ function paint(post) {
     signal.region || "",
     decision.status === "scored" ? decision.score : decision.status,
   ].join(" · ");
+  const classes = visualClassNames({ decision, range, markUnknown: state.markUnknown });
   const signature = [key, decision.status, decision.score, range?.id || "", state.markUnknown, summary].join("|");
-  if (signatures.get(post.element) === signature) return;
+  if (signatures.get(post.element) === signature && sameMarks(post.element, classes)) return;
   signatures.set(post.element, signature);
   applyVisual(post.element, { key, decision, range, markUnknown: state.markUnknown, debug: state.debug, summary });
   if (state.debug) rememberDebug({ summary, selector: post.selector, signal, decision });

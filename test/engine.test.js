@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyVisual } from "../src/lib/apply.js";
+import { applyVisual, lostDatelineClass, sameMarks } from "../src/lib/apply.js";
 import { emptyCache, expiryFor, putCached, readCached, TTL } from "../src/lib/cache.js";
 import { sanitizeCss } from "../src/lib/css-sanitize.js";
 import { handleFromHref, profileHandleFromPath, statusIdFromHref } from "../src/lib/dom.js";
@@ -74,6 +74,27 @@ test("recycled post nodes lose the previous color", () => {
   assert.equal(element.dataset.dlScore, undefined);
   assert.equal(element.dataset.dlKey, "2:ada");
   assert.equal(element.dataset.dlDebug, "ada · missing");
+});
+
+test("a rewritten class attribute no longer counts as painted", () => {
+  const element = fakeArticle();
+  element.classList.add("dl-sweden");
+  assert.equal(sameMarks(element, ["dl-sweden"]), true);
+  element.classList.remove("dl-sweden");
+  assert.equal(sameMarks(element, ["dl-sweden"]), false);
+  element.classList.add("dl-sweden", "dl-africa");
+  assert.equal(sameMarks(element, ["dl-sweden"]), false);
+  element.classList.remove("dl-sweden", "dl-africa");
+  assert.equal(sameMarks(element, []), true);
+});
+
+test("a class rewrite reports the lost dateline mark", () => {
+  const element = fakeArticle();
+  element.classList.add("dl-sweden");
+  assert.equal(lostDatelineClass("css-1 dl-sweden", element), false);
+  element.classList.remove("dl-sweden");
+  assert.equal(lostDatelineClass("css-1 dl-sweden", element), true);
+  assert.equal(lostDatelineClass("css-1", element), false);
 });
 
 test("post links yield the content author and the status id", () => {

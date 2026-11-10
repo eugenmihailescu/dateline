@@ -1,4 +1,4 @@
-import { applyVisual, clearMarks } from "../lib/apply.js";
+import { applyVisual, clearMarks, lostDatelineClass, sameMarks, visualClassNames } from "../lib/apply.js";
 import { emptyCache, expiryFor, putCached, readCached, TTL } from "../lib/cache.js";
 import { sanitizeCss } from "../lib/css-sanitize.js";
 import { defaultState, mergeState } from "../lib/migrate.js";
@@ -17,6 +17,7 @@ let cache = emptyCache();
 let placesIndex = createIndex();
 let signatures = new WeakMap();
 let observer = null;
+let classObserver = null;
 const observed = new WeakSet();
 const intersecting = new WeakSet();
 const pending = new Map();
@@ -62,6 +63,7 @@ async function boot() {
   chrome.storage.onChanged.addListener(onStorage);
   observer = new IntersectionObserver(onIntersect, { root: null, rootMargin: "400px 0px" });
   new MutationObserver(() => schedule()).observe(document.body, { childList: true, subtree: true });
+  classObserver = new MutationObserver(onClassReset);
   window.addEventListener("message", onPageMessage);
   const helloTimer = setInterval(() => {
     if (acked) {
@@ -160,11 +162,34 @@ function applyChrome() {
   if (!style) document.documentElement.appendChild(node);
 }
 
-function schedule() {
+function onClassReset(records) {
+  for (const record of records) {
+    if (record.attributeName !== "class") continue;
+    if (lostDatelineClass(record.oldValue, record.target)) {
+      schedule(0);
+      return;
+    }
+  }
+}
+
+function watchPostClasses(posts) {
+  if (!classObserver) return;
+  // Drop records from our own classList edits, then watch the posts we just painted.
+  classObserver.disconnect();
+  for (const post of posts) {
+    classObserver.observe(post.element, {
+      attributes: true,
+      attributeFilter: ["class"],
+      attributeOldValue: true,
+    });
+  }
+}
+
+function schedule(delayOverride) {
   const now = Date.now();
   if (!firstDirty) firstDirty = now;
   clearTimeout(scanTimer);
-  const delay = now - firstDirty >= 800 ? 0 : 200;
+  const delay = delayOverride === undefined ? (now - firstDirty >= 800 ? 0 : 200) : delayOverride;
   scanTimer = setTimeout(() => {
     firstDirty = 0;
     scan();
@@ -204,6 +229,7 @@ function scan() {
     }
     paint(post);
   }
+  watchPostClasses(posts);
   if (profile) visible.add(profile.handle.toLowerCase());
   if (!state.enabled || !state.enrichment) return;
   for (const handle of visible) {
@@ -216,7 +242,7 @@ function paint(post) {
   const key = `${post.statusId}:${post.handle.toLowerCase()}`;
   if (!state.enabled || (state.skipPromoted && post.promoted)) {
     const signature = `${key}|off`;
-    if (signatures.get(post.element) === signature) return;
+    if (signatures.get(post.element) === signature && sameMarks(post.element, [])) return;
     signatures.set(post.element, signature);
     clearMarks(post.element);
     return;
@@ -233,8 +259,9 @@ function paint(post) {
     signal.region || "",
     decision.status === "scored" ? decision.score : decision.status,
   ].join(" · ");
+  const classes = visualClassNames({ decision, range, markUnknown: state.markUnknown });
   const signature = [key, decision.status, decision.score, range?.id || "", state.markUnknown, summary].join("|");
-  if (signatures.get(post.element) === signature) return;
+  if (signatures.get(post.element) === signature && sameMarks(post.element, classes)) return;
   signatures.set(post.element, signature);
   applyVisual(post.element, { key, decision, range, markUnknown: state.markUnknown, debug: state.debug, summary });
   if (state.debug) rememberDebug({ summary, selector: post.selector, signal, decision });
